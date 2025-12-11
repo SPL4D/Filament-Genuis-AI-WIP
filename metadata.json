@@ -1,0 +1,5 @@
+{
+  "name": "Filament Genius AI",
+  "description": "An intelligent 3D printing filament recommendation engine featuring conversational AI and guided questionnaire modes, integrated with 3dprintergear.com.au product catalogs.",
+  "requestFramePermissions": []
+}
