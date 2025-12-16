@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { QuestionnaireData, FilamentRecommendation } from '../types';
 import { generateFilamentRecommendations } from '../services/geminiService';
 import RecommendationCard from './RecommendationCard';
-import { ChevronRight, Printer, Palette, DollarSign, PenTool, Loader2, ArrowLeft } from 'lucide-react';
+import { ChevronRight, Printer, Palette, DollarSign, PenTool, Loader2, ArrowLeft, Save, Home } from 'lucide-react';
 
 interface OptionButtonProps {
   selected: boolean;
@@ -32,7 +32,13 @@ const OptionButton: React.FC<OptionButtonProps> = ({
   </button>
 );
 
-const Questionnaire: React.FC = () => {
+interface Props {
+  isLoggedIn: boolean;
+  onSaveProject: (title: string, type: string, recs: FilamentRecommendation[]) => void;
+  onGoHome: () => void;
+}
+
+const Questionnaire: React.FC<Props> = ({ isLoggedIn, onSaveProject, onGoHome }) => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<FilamentRecommendation[]>([]);
@@ -43,6 +49,10 @@ const Questionnaire: React.FC = () => {
     aesthetic: 'standard',
     budget: 'standard',
   });
+  
+  // Save Modal State
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [projectTitle, setProjectTitle] = useState('');
 
   const handleNext = () => setStep((p) => p + 1);
   const handleBack = () => setStep((p) => Math.max(1, p - 1));
@@ -57,6 +67,18 @@ const Questionnaire: React.FC = () => {
       console.error(e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveClick = () => {
+    if (projectTitle.trim()) {
+      // Determine a "type" tag based on input
+      let type = "General";
+      if (formData.aesthetic !== 'standard') type = formData.aesthetic;
+      if (formData.printerType === 'heated_chamber') type = "Engineering";
+
+      onSaveProject(projectTitle, type, results);
+      setShowSaveModal(false);
     }
   };
 
@@ -76,15 +98,56 @@ const Questionnaire: React.FC = () => {
   if (step === 6 && results.length > 0) {
     return (
       <div className="w-full max-w-5xl mx-auto py-8 px-4">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
           <h2 className="text-2xl font-bold text-slate-900">Your Recommendations</h2>
-          <button 
-            onClick={() => { setResults([]); setStep(1); }}
-            className="text-brand-600 hover:text-brand-700 font-medium text-sm flex items-center gap-1"
-          >
-            Start Over <ChevronRight size={16} />
-          </button>
+          
+          <div className="flex items-center gap-3">
+             <button 
+              onClick={() => { setResults([]); setStep(1); }}
+              className="text-slate-500 hover:text-slate-700 font-medium text-sm flex items-center gap-1"
+            >
+              Start Over <ChevronRight size={16} />
+            </button>
+            {isLoggedIn ? (
+               <button 
+                onClick={() => setShowSaveModal(true)}
+                className="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-800 flex items-center gap-2"
+              >
+                <Save size={16} /> Save Project
+              </button>
+            ) : (
+              <span className="text-xs text-slate-400 bg-slate-100 px-3 py-1 rounded-full">Sign in to save</span>
+            )}
+          </div>
         </div>
+
+        {/* Save Modal */}
+        {showSaveModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl animate-fade-in">
+              <h3 className="text-lg font-bold mb-4">Name your project</h3>
+              <input 
+                type="text" 
+                autoFocus
+                placeholder="e.g. Drone Frame V1"
+                className="w-full p-3 bg-white text-slate-900 border border-slate-200 rounded-xl mb-4 focus:ring-2 focus:ring-brand-500 outline-none"
+                value={projectTitle}
+                onChange={(e) => setProjectTitle(e.target.value)}
+              />
+              <div className="flex justify-end gap-2">
+                <button onClick={() => setShowSaveModal(false)} className="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg">Cancel</button>
+                <button 
+                  onClick={handleSaveClick}
+                  disabled={!projectTitle.trim()}
+                  className="px-4 py-2 bg-brand-600 text-white rounded-lg font-medium hover:bg-brand-700 disabled:opacity-50"
+                >
+                  Save & View Dashboard
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {results.map((rec, idx) => (
             <RecommendationCard key={idx} data={rec} />
@@ -117,19 +180,25 @@ const Questionnaire: React.FC = () => {
                 value={formData.application}
                 onChange={(e) => setFormData({...formData, application: e.target.value})}
                 placeholder="e.g. A functional gear for a bike, a decorative vase, or a cosplay helmet..."
-                className="w-full p-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none min-h-[120px] resize-none text-slate-700"
+                className="w-full p-4 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none min-h-[120px] resize-none text-slate-900 placeholder-slate-400"
               />
             </div>
-            <button
-              onClick={handleNext}
-              disabled={!formData.application.trim()}
-              className="w-full py-3 bg-brand-600 hover:bg-brand-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
-            >
-              Next Step <ChevronRight size={18} />
-            </button>
+            <div className="flex gap-3">
+              <button onClick={onGoHome} className="px-4 py-3 border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-600"><Home size={20}/></button>
+              <button
+                onClick={handleNext}
+                disabled={!formData.application.trim()}
+                className="flex-1 py-3 bg-brand-600 hover:bg-brand-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
+              >
+                Next Step <ChevronRight size={18} />
+              </button>
+            </div>
           </div>
         )}
 
+        {/* ... (Steps 2, 3, 4 are largely the same structure, just updated content, but step 4 invokes handleSubmit) ... */}
+        {/* We keep the logic identical for other steps, just ensuring imports and layout integrity */}
+        
         {step === 2 && (
           <div className="space-y-6 animate-fade-in">
             <div className="flex items-center gap-3 mb-6">

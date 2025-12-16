@@ -4,6 +4,14 @@ export enum AppView {
   DASHBOARD = 'DASHBOARD',
   CHAT = 'CHAT',
   QUESTIONNAIRE = 'QUESTIONNAIRE',
+  NEW_PROJECT_CHOICE = 'NEW_PROJECT_CHOICE',
+}
+
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  joinedDate: number;
 }
 
 export interface FilamentRecommendation {
@@ -39,8 +47,12 @@ export interface QuestionnaireData {
 
 export interface Project {
   id: string;
+  userId: string;
   title: string;
   date: string;
-  type: string;
+  timestamp: number;
+  type: string; // e.g. "Engineering" or "Aesthetic" based on input
   thumbnail: string;
+  recommendations?: FilamentRecommendation[]; // Store the results (optional)
+  chatHistory?: ChatMessage[]; // Store chat history (optional)
 }
